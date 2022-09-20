@@ -10,6 +10,9 @@
 #include "pico/binary_info.h"
 #include "hardware/i2c.h"
 
+#include "driver_mpu6050_interface.h"
+#include "mpu6050/driver_mpu6050.h"
+
 /* Example code to talk to a MPU6050 MEMS accelerometer and gyroscope
 
    This is taking to simple approach of simply reading registers. It's perfectly
@@ -33,45 +36,27 @@
 // By default these devices  are on bus address 0x68
 static int addr = 0x68;
 
-static void mpu6050_reset() {
-    // Two byte reset. First byte register, second byte data
-    // There are a load more options to set up the device in different ways that could be added here
-     uint8_t buffer[1] = {0};
+// static void mpu6050_reset() {
+//     // Two byte reset. First byte register, second byte data
+//     // There are a load more options to set up the device in different ways that could be added here
+//      uint8_t buffer[1] = {0};
 
-    uint8_t buf[] = {0x6B, 0x00};
-    i2c_write_blocking(i2c_default, addr, buf, 2, false);
+//     uint8_t buf[] = {0x6B, 0x00};
+//     i2c_write_blocking(i2c_default, addr, buf, 2, false);
 
-    sleep_ms(1000);
+//     sleep_ms(1000);
 
-    // read settings
-    uint8_t val = 27;
-    i2c_write_blocking(i2c_default, addr, &val, 1, true);
-    i2c_read_blocking(i2c_default, addr, buffer, 1, false);
-    printf("Gyro sensitivity: %d\n", buffer[0]);
+//     // read settings
+//     uint8_t val = 27;
+//     i2c_write_blocking(i2c_default, addr, &val, 1, true);
+//     i2c_read_blocking(i2c_default, addr, buffer, 1, false);
+//     printf("Gyro sensitivity: %d\n", buffer[0]);
 
-    val = 28;
-    i2c_write_blocking(i2c_default, addr, &val, 1, true);
-    i2c_read_blocking(i2c_default, addr, buffer, 1, false);
-    printf("Accel sensitivity: %d\n", buffer[0]);
-
-    //
-    // uint8_t val = 0x19;
-    // i2c_write_blocking(i2c_default, addr, &val, 1, true);
-    // i2c_read_blocking(i2c_default, addr, buffer, 1, false);
-    // printf("= before %d\n", buffer[0]);
-
-    // sleep_ms(1000);
-
-    // uint8_t buf2[] = {0x19, 0x84};
-    // i2c_write_blocking(i2c_default, addr, buf2, 2, false);
-
-    // sleep_ms(1000);
-
-    // i2c_write_blocking(i2c_default, addr, &val, 1, true);
-    // i2c_read_blocking(i2c_default, addr, buffer, 1, false);
-    // printf("== after %d\n", buffer[0]);
-
-}
+//     val = 28;
+//     i2c_write_blocking(i2c_default, addr, &val, 1, true);
+//     i2c_read_blocking(i2c_default, addr, buffer, 1, false);
+//     printf("Accel sensitivity: %d\n", buffer[0]);
+// }
 
 static void mpu6050_read_raw(int16_t accel[3], int16_t gyro[3], int16_t *temp) {
     // For this particular device, we send the device the register we want to read
@@ -113,30 +98,26 @@ int main() {
     sleep_ms(1000);
     printf("Hello, MPU6050! Reading raw data from registers... %d %d\n", PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN);
 
-    // This example will use I2C0 on the default SDA and SCL pins (4, 5 on a Pico)
-    i2c_init(i2c_default, 400 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
-    // Make the I2C pins available to picotool
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
+    mpu6050_basic_init(addr);
 
-    mpu6050_reset();
-
-    int16_t acceleration[3], gyro[3], temp;
+    float g[3];
+    float dps[3];
+    float degrees;
     uint count = 0;
     while (1) {
-        mpu6050_read_raw(acceleration, gyro, &temp);
 
-        // These are the raw numbers from the chip, so will need tweaking to be really useful.
-        // See the datasheet for more information
-        printf("Acc. X = %d, Y = %d, Z = %d\n", acceleration[0], acceleration[1], acceleration[2]);
-        printf("Gyro. X = %d, Y = %d, Z = %d\n", gyro[0], gyro[1], gyro[2]);
-        // Temperature is simple so use the datasheet calculation to get deg C.
-        // Note this is chip temperature.
-        printf("Temp. = %f\n", (temp / 340.0) + 36.53);
-        printf("=== %d\n", count);
+        mpu6050_basic_read(g, dps);
+        mpu6050_basic_read_temperature(&degrees);
+
+        /* output */
+        mpu6050_interface_debug_print("mpu6050: %d.\n", count + 1);
+        mpu6050_interface_debug_print("mpu6050: acc x is %0.2fg.\n", g[0]);
+        mpu6050_interface_debug_print("mpu6050: acc y is %0.2fg.\n", g[1]);
+        mpu6050_interface_debug_print("mpu6050: acc z is %0.2fg.\n", g[2]);
+        mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
+        mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
+        mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
+        mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
 
         sleep_ms(1000);
         count++;

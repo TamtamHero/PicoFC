@@ -1,0 +1,206 @@
+/**
+ * Copyright (c) 2015 - present LibDriver All rights reserved
+ * 
+ * The MIT License (MIT)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE. 
+ *
+ * @file      driver_mpu6050_interface.h
+ * @brief     driver mpu6050 interface header file
+ * @version   1.0.0
+ * @author    Shifeng Li
+ * @date      2022-06-30
+ *
+ * <h3>history</h3>
+ * <table>
+ * <tr><th>Date        <th>Version  <th>Author      <th>Description
+ * <tr><td>2022/06/30  <td>1.0      <td>Shifeng Li  <td>first upload
+ * </table>
+ */
+
+#ifndef DRIVER_MPU6050_INTERFACE_H
+#define DRIVER_MPU6050_INTERFACE_H
+
+#include "mpu6050/driver_mpu6050.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+/**
+ * @defgroup mpu6050_interface_driver mpu6050 interface driver function
+ * @brief    mpu6050 interface driver modules
+ * @ingroup  mpu6050_driver
+ * @{
+ */
+
+/**
+ * @brief  interface iic bus init
+ * @return status code
+ *         - 0 success
+ *         - 1 iic init failed
+ * @note   none
+ */
+uint8_t mpu6050_interface_iic_init();
+
+/**
+ * @brief  interface iic bus deinit
+ * @return status code
+ *         - 0 success
+ *         - 1 iic deinit failed
+ * @note   none
+ */
+uint8_t mpu6050_interface_iic_deinit(void);
+
+/**
+ * @brief      interface iic bus read
+ * @param[in]  addr is the iic device write address
+ * @param[in]  reg is the iic register address
+ * @param[out] *buf points to a data buffer
+ * @param[in]  len is the length of the data buffer
+ * @return     status code
+ *             - 0 success
+ *             - 1 read failed
+ * @note       none
+ */
+uint8_t mpu6050_interface_iic_read(uint8_t addr, uint8_t reg, uint8_t *buf, uint16_t len);
+
+/**
+ * @brief     interface iic bus write
+ * @param[in] addr is the iic device write address
+ * @param[in] reg is the iic register address
+ * @param[in] *buf points to a data buffer
+ * @param[in] len is the length of the data buffer
+ * @return    status code
+ *            - 0 success
+ *            - 1 write failed
+ * @note      none
+ */
+uint8_t mpu6050_interface_iic_write(uint8_t addr, uint8_t reg, uint8_t *buf, uint16_t len);
+
+/**
+ * @brief     interface delay ms
+ * @param[in] ms
+ * @note      none
+ */
+void mpu6050_interface_delay_ms(uint32_t ms);
+
+/**
+ * @brief     interface print format data
+ * @param[in] fmt is the format data
+ * @note      none
+ */
+void mpu6050_interface_debug_print(const char *const fmt, ...);
+
+/**
+ * @brief     interface receive callback
+ * @param[in] type is the irq type
+ * @note      none
+ */
+void mpu6050_interface_receive_callback(uint8_t type);
+
+/**
+ * @brief     interface dmp tap callback
+ * @param[in] count is the tap count
+ * @param[in] direction is the tap direction
+ * @note      none
+ */
+void mpu6050_interface_dmp_tap_callback(uint8_t count, uint8_t direction);
+
+/**
+ * @brief     interface dmp orient callback
+ * @param[in] orientation is the dmp orientation
+ * @note      none
+ */
+void mpu6050_interface_dmp_orient_callback(uint8_t orientation);
+
+
+/*********** User Facing Functions *************/
+
+#define MPU6050_BASIC_DEFAULT_CLOCK_SOURCE                   MPU6050_CLOCK_SOURCE_PLL_X_GYRO           /**< gyro pll x */
+#define MPU6050_BASIC_DEFAULT_RATE                           50                                        /**< 50Hz */
+#define MPU6050_BASIC_DEFAULT_LOW_PASS_FILTER                MPU6050_LOW_PASS_FILTER_3                 /**< low pass filter 3 */
+#define MPU6050_BASIC_DEFAULT_CYCLE_WAKE_UP                  MPU6050_BOOL_FALSE                        /**< disable cycle wake up */
+#define MPU6050_BASIC_DEFAULT_WAKE_UP_FREQUENCY              MPU6050_WAKE_UP_FREQUENCY_1P25_HZ         /**< 1.25Hz */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_PIN_LEVEL            MPU6050_PIN_LEVEL_LOW                     /**< low level */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_PIN_TYPE             MPU6050_PIN_TYPE_PUSH_PULL                /**< push pull */
+#define MPU6050_BASIC_DEFAULT_ACCELEROMETER_RANGE            MPU6050_ACCELEROMETER_RANGE_2G            /**< 2g */
+#define MPU6050_BASIC_DEFAULT_GYROSCOPE_RANGE                MPU6050_GYROSCOPE_RANGE_2000DPS           /**< 2000dps */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_MOTION               MPU6050_BOOL_FALSE                        /**< disable motion */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_FIFO_OVERFLOW        MPU6050_BOOL_FALSE                        /**< disable fifo overflow */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_DMP                  MPU6050_BOOL_FALSE                        /**< disable dmp */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_I2C_MAST             MPU6050_BOOL_FALSE                        /**< disable i2c master */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_DATA_READY           MPU6050_BOOL_FALSE                        /**< disable data ready */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_LATCH                MPU6050_BOOL_TRUE                         /**< enable latch */
+#define MPU6050_BASIC_DEFAULT_INTERRUPT_READ_CLEAR           MPU6050_BOOL_TRUE                         /**< enable interrupt read clear */
+#define MPU6050_BASIC_DEFAULT_EXTERN_SYNC                    MPU6050_EXTERN_SYNC_INPUT_DISABLED        /**< extern sync input disable */
+#define MPU6050_BASIC_DEFAULT_FSYNC_INTERRUPT                MPU6050_BOOL_FALSE                        /**< disable fsync interrupt */
+#define MPU6050_BASIC_DEFAULT_FSYNC_INTERRUPT_LEVEL          MPU6050_PIN_LEVEL_LOW                     /**< low level */
+#define MPU6050_BASIC_DEFAULT_IIC_MASTER                     MPU6050_BOOL_FALSE                        /**< disable iic master */
+#define MPU6050_BASIC_DEFAULT_IIC_BYPASS                     MPU6050_BOOL_FALSE                        /**< disable iic bypass */
+
+/**
+ * @brief     basic example init
+ * @param[in] addr_pin is the iic device address
+ * @return    status code
+ *            - 0 success
+ *            - 1 init failed
+ * @note      none
+ */
+uint8_t mpu6050_basic_init(mpu6050_address_t addr_pin);
+
+/**
+ * @brief  basic example deinit
+ * @return status code
+ *         - 0 success
+ *         - 1 deinit failed
+ * @note   none
+ */
+uint8_t mpu6050_basic_deinit(void);
+
+/**
+ * @brief      basic example read
+ * @param[out] *g points to a converted data buffer
+ * @param[out] *dps points to a converted data buffer
+ * @return     status code
+ *             - 0 success
+ *             - 1 read failed
+ * @note       none
+ */
+uint8_t mpu6050_basic_read(float g[3], float dps[3]);
+
+/**
+ * @brief      basic example read temperature
+ * @param[out] *degrees points to a converted data buffer
+ * @return     status code
+ *             - 0 success
+ *             - 1 read temperature failed
+ * @note       none
+ */
+uint8_t mpu6050_basic_read_temperature(float *degrees);
+
+/**
+ * @}
+ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

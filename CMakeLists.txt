@@ -20,12 +20,19 @@ add_compile_options(-Wall
         -Wno-maybe-uninitialized
         )
 
+add_subdirectory(drivers)
+
 add_executable(picoFC
-        picoFC.c
+        src/picoFC.c
+        src/driver_mpu6050_interface.c
+        )
+
+target_include_directories(picoFC PUBLIC
+        "${PROJECT_SOURCE_DIR}/drivers"
         )
 
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(picoFC pico_stdlib hardware_i2c)
+target_link_libraries(picoFC pico_stdlib hardware_i2c mpu6050)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)

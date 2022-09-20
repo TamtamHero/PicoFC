@@ -1,0 +1,1 @@
+add_library(mpu6050 driver_mpu6050.c)

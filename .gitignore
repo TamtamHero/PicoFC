@@ -20,3 +20,4 @@ Makefile
 *.map
 *.hex
 *.uf2
+*.a
