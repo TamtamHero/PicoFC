@@ -7,9 +7,12 @@ project(PicoFC C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-if (PICO_SDK_VERSION_STRING VERSION_LESS "1.3.0")
-    message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.3.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
-endif()
+
+# Set flags and directory variables
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DTSDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTSDEBUG")
+set(FREERTOS_CFG_DIRECTORY "${CMAKE_SOURCE_DIR}/Config")
+set(FREERTOS_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/FreeRTOS-Kernel")
 
 # Initialize the SDK
 pico_sdk_init()
@@ -20,6 +23,26 @@ add_compile_options(-Wall
         -Wno-maybe-uninitialized
         )
 
+# Add FreeRTOS as a library
+add_library(FreeRTOS STATIC
+    ${FREERTOS_SRC_DIRECTORY}/event_groups.c
+    ${FREERTOS_SRC_DIRECTORY}/list.c
+    ${FREERTOS_SRC_DIRECTORY}/queue.c
+    ${FREERTOS_SRC_DIRECTORY}/stream_buffer.c
+    ${FREERTOS_SRC_DIRECTORY}/tasks.c
+    ${FREERTOS_SRC_DIRECTORY}/timers.c
+    ${FREERTOS_SRC_DIRECTORY}/portable/MemMang/heap_3.c
+    ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0/port.c
+)
+
+# Build FreeRTOS
+target_include_directories(FreeRTOS PUBLIC
+    ${FREERTOS_CFG_DIRECTORY}/
+    ${FREERTOS_SRC_DIRECTORY}/include
+    ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0
+)
+
+# Add peripherals drivers
 add_subdirectory(drivers)
 
 add_executable(picoFC
@@ -32,7 +55,7 @@ target_include_directories(picoFC PUBLIC
         )
 
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(picoFC pico_stdlib hardware_i2c mpu6050)
+target_link_libraries(picoFC pico_stdlib hardware_i2c mpu6050 FreeRTOS)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)
