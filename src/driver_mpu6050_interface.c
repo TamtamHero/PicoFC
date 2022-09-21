@@ -102,10 +102,12 @@ uint8_t mpu6050_interface_iic_read(uint8_t addr, uint8_t reg, uint8_t *buf, uint
  *            - 1 write failed
  * @note      none
  */
+uint8_t msg[50]; // somehow we have to send it all at once...
 uint8_t mpu6050_interface_iic_write(uint8_t addr, uint8_t reg, uint8_t *buf, uint16_t len)
 {
-    i2c_write_blocking(i2c_default, addr, &reg, 1, true); // true to keep master control of bus
-    i2c_write_blocking(i2c_default, addr, buf, len, false);
+    msg[0] = reg;
+    memcpy(msg+1, buf, len);
+    i2c_write_blocking(i2c_default, addr, msg, len+1, false);
     return 0;
 }
 
@@ -730,6 +732,8 @@ uint8_t mpu6050_basic_init(mpu6050_address_t addr_pin)
 
         return 1;
     }
+
+    mpu6050_interface_debug_print("mpu6050: init done.\n");
 
     return 0;
 }
