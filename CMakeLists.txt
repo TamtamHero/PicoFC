@@ -47,7 +47,9 @@ add_subdirectory(drivers)
 
 add_executable(picoFC
         src/picoFC.c
-        src/driver_mpu6050_interface.c
+        src/sensors/driver_mpu6050_interface.c
+        src/radio/crsf.c
+        src/misc/crc8.c
         )
 
 target_include_directories(picoFC PUBLIC
