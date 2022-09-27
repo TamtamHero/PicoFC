@@ -41,34 +41,7 @@ volatile QueueHandle_t queue = NULL;
 
 // Record references to the tasks
 TaskHandle_t mpu6050_task_handle = NULL;
-
-// void task_mpu6050(void* unused_arg){
-//     mpu6050_basic_init(addr);
-//     sleep_ms(1000);
-
-//     float g[3];
-//     float dps[3];
-//     float degrees;
-//     uint count = 0;
-//     while (1) {
-
-//         mpu6050_basic_read(g, dps);
-//         mpu6050_basic_read_temperature(&degrees);
-
-//         /* output */
-//         mpu6050_interface_debug_print("mpu6050: %d.\n", count + 1);
-//         mpu6050_interface_debug_print("mpu6050: acc x is %0.2fg.\n", g[0]);
-//         mpu6050_interface_debug_print("mpu6050: acc y is %0.2fg.\n", g[1]);
-//         mpu6050_interface_debug_print("mpu6050: acc z is %0.2fg.\n", g[2]);
-//         mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
-//         mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
-//         mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
-//         mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
-
-//         sleep_ms(1000);
-//         count++;
-//     }
-// }
+TaskHandle_t crsf_task_handle = NULL;
 
 uint8_t crc8_calc(uint8_t crc, unsigned char a)
 {
@@ -297,7 +270,7 @@ void on_uart_rx() {
     }
 }
 
-void task_mpu6050(void* unused_arg){
+void task_crsf(void* unused_arg){
     // Set up our UART with the required speed.
     uart_init(UART_ID, BAUD_RATE);
 
@@ -331,25 +304,60 @@ void task_mpu6050(void* unused_arg){
         tight_loop_contents();
 }
 
+void task_mpu6050(void* unused_arg){
+    mpu6050_basic_init(addr);
+    sleep_ms(1000);
+
+    float g[3];
+    float dps[3];
+    float degrees;
+    uint count = 0;
+    while (1) {
+
+        mpu6050_basic_read(g, dps);
+        mpu6050_basic_read_temperature(&degrees);
+
+        /* output */
+        mpu6050_interface_debug_print("mpu6050: %d.\n", count + 1);
+        mpu6050_interface_debug_print("mpu6050: acc x is %0.2fg.\n", g[0]);
+        mpu6050_interface_debug_print("mpu6050: acc y is %0.2fg.\n", g[1]);
+        mpu6050_interface_debug_print("mpu6050: acc z is %0.2fg.\n", g[2]);
+        mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
+        mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
+        mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
+        mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
+
+        sleep_ms(1000);
+        count++;
+    }
+}
+
 int main() {
     stdio_init_all();
     sleep_ms(1000);
-    printf("Hello, MPU6050! Reading raw data from registers... %d %d\n", PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN);
+    printf("+++ Hello, PicoFC! +++\n");
 
     // Store handles referencing the task; get return value
-    // NOTE Arg 3 is the stack depth -- in words, not bytes
+    // NOTE Arg 3 is the stack depth -- in words (4 bytes)
     BaseType_t mpu6050_task_status = xTaskCreate(task_mpu6050,
                                          "MPU6050_TASK",
-                                         32768,
+                                         2048,
                                          NULL,
                                          1,
                                          &mpu6050_task_handle);
+
+    BaseType_t crsf_task_status = xTaskCreate(task_crsf,
+                                         "CRSF_TASK",
+                                         16384,
+                                         NULL,
+                                         1,
+                                         &crsf_task_handle);
 
     // Set up the event queue
     queue = xQueueCreate(4, sizeof(uint8_t));
 
     // Start the FreeRTOS scheduler
-    if (mpu6050_task_status == pdPASS) {
+    if (mpu6050_task_status == pdPASS && crsf_task_status == pdPASS) {
         vTaskStartScheduler();
     }
 
