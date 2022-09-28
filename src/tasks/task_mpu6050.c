@@ -11,9 +11,6 @@
 // PicoFC code
 #include "../sensors/driver_mpu6050_interface.h"
 
-// By default these devices  are on bus address 0x68
-#define MPU6050_I2C_BASE_ADDR 0x68
-
 void task_mpu6050(void* unused_arg){
     mpu6050_basic_init(MPU6050_I2C_BASE_ADDR);
     sleep_ms(1000);

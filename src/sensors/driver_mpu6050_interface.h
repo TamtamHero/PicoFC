@@ -133,6 +133,9 @@ void mpu6050_interface_dmp_orient_callback(uint8_t orientation);
 
 /*********** User Facing Functions *************/
 
+// By default these devices  are on bus address 0x68
+#define MPU6050_I2C_BASE_ADDR 0x68
+
 #define MPU6050_BASIC_DEFAULT_CLOCK_SOURCE                   MPU6050_CLOCK_SOURCE_PLL_X_GYRO           /**< gyro pll x */
 #define MPU6050_BASIC_DEFAULT_RATE                           50                                        /**< 50Hz */
 #define MPU6050_BASIC_DEFAULT_LOW_PASS_FILTER                MPU6050_LOW_PASS_FILTER_3                 /**< low pass filter 3 */
