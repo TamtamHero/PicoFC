@@ -46,10 +46,12 @@ target_include_directories(FreeRTOS PUBLIC
 add_subdirectory(drivers)
 
 add_executable(picoFC
-        src/picoFC.c
+        src/main.c
         src/sensors/driver_mpu6050_interface.c
         src/radio/crsf.c
         src/misc/crc8.c
+        src/tasks/task_crsf.c
+        src/tasks/task_mpu6050.c
         )
 
 target_include_directories(picoFC PUBLIC
