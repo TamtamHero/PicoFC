@@ -14,6 +14,10 @@
 #define UART_TX_PIN 8
 #define UART_RX_PIN 9
 
+#define CRSF_CHAN_COUNT 16
+#define CRSF_SCALE_FACTOR 0.62477120195241
+#define CRSF_SCALE_OFFSET 880.53935326418548
+
 typedef enum {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
@@ -65,7 +69,35 @@ typedef enum {
     CRSF_STATE_ERROR,
 } crsf_parser_state_e;
 
-typedef struct{
+struct crsf_fc_payload_rc_channels_packed_s {
+    // 176 bits of data (11 bits per channel * 16 channels) = 22 bytes.
+    unsigned int chan0 : 11;
+    unsigned int chan1 : 11;
+    unsigned int chan2 : 11;
+    unsigned int chan3 : 11;
+    unsigned int chan4 : 11;
+    unsigned int chan5 : 11;
+    unsigned int chan6 : 11;
+    unsigned int chan7 : 11;
+    unsigned int chan8 : 11;
+    unsigned int chan9 : 11;
+    unsigned int chan10 : 11;
+    unsigned int chan11 : 11;
+    unsigned int chan12 : 11;
+    unsigned int chan13 : 11;
+    unsigned int chan14 : 11;
+    unsigned int chan15 : 11;
+} __attribute__ ((__packed__));
+
+typedef struct crsf_fc_payload_rc_channels_packed_s crsf_fc_payload_rc_channels_packed_t;
+
+union crsf_msg_u{
+        crsf_fc_payload_rc_channels_packed_t rc_channels_packed;
+};
+
+typedef union crsf_msg_u crsf_msg_t;
+
+struct crsf_frame_s{
     // this parser is a state machine
     crsf_parser_state_e state;
     crsf_addr_e address;
@@ -74,11 +106,16 @@ typedef struct{
     crsf_type_e type;
     //Should be equal to `.frame_len` - 2
     size_t payload_len;
-    // A CRSF payload can be 60 bytes long at most
-    uint8_t payload[60];
+    union {
+        // A CRSF payload can be 60 bytes long at most
+        uint8_t raw[60];
+        crsf_msg_t msg;
+    } payload;
     // Number of frame bytes received (should be equal to `.frame_len` + 2 when finalized)
     size_t received;
-} crsf_frame_t;
+};
+
+typedef struct crsf_frame_s crsf_frame_t;
 
 void on_uart_rx();
 

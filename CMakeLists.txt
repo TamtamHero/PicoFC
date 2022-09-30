@@ -52,6 +52,7 @@ add_executable(picoFC
         src/misc/crc8.c
         src/tasks/task_crsf.c
         src/tasks/task_mpu6050.c
+        src/tasks/task_leds.c
         )
 
 target_include_directories(picoFC PUBLIC
@@ -59,7 +60,7 @@ target_include_directories(picoFC PUBLIC
         )
 
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(picoFC pico_stdlib hardware_i2c mpu6050 FreeRTOS)
+target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm mpu6050 FreeRTOS)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)
