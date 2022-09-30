@@ -26,13 +26,13 @@ void task_mpu6050(void* unused_arg){
 
         /* output */
         mpu6050_interface_debug_print("mpu6050: %d.\n", count + 1);
-        mpu6050_interface_debug_print("mpu6050: acc x is %0.2fg.\n", g[0]);
-        mpu6050_interface_debug_print("mpu6050: acc y is %0.2fg.\n", g[1]);
-        mpu6050_interface_debug_print("mpu6050: acc z is %0.2fg.\n", g[2]);
-        mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
-        mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
-        mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
-        mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
+        // mpu6050_interface_debug_print("mpu6050: acc x is %0.2fg.\n", g[0]);
+        // mpu6050_interface_debug_print("mpu6050: acc y is %0.2fg.\n", g[1]);
+        // mpu6050_interface_debug_print("mpu6050: acc z is %0.2fg.\n", g[2]);
+        // mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
+        // mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
+        // mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
+        // mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
 
         sleep_ms(1000);
         count++;
