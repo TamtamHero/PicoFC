@@ -178,7 +178,7 @@ void crsf_parser(uint8_t* buffer, size_t len){
             break;
 
             default:
-                printf("Error: parser entered unknown state\n");
+                printf("Error: parser entered unknown state %d\n", cur_frame.state);
                 break;
         }
 

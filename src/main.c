@@ -28,7 +28,8 @@ volatile QueueHandle_t queue = NULL;
 // Record references to the tasks
 TaskHandle_t mpu6050_task_handle = NULL;
 TaskHandle_t crsf_task_handle = NULL;
-TaskHandle_t leds_task_handle = NULL;
+// TaskHandle_t leds_task_handle = NULL;
+TaskHandle_t motors_task_handle = NULL;
 
 // PicoFC runtime context
 picoFC_ctx_t picoFC_ctx;
@@ -54,18 +55,25 @@ int main() {
                                          1,
                                          &crsf_task_handle);
 
-    BaseType_t leds_task_status = xTaskCreate(task_leds,
-                                         "LEDS_TASK",
+    BaseType_t motors_task_status = xTaskCreate(task_motors,
+                                         "MOTORS_TASK",
                                          16384,
                                          NULL,
                                          1,
-                                         &leds_task_handle);
+                                         &motors_task_handle);
+
+    // BaseType_t leds_task_status = xTaskCreate(task_leds,
+    //                                      "LEDS_TASK",
+    //                                      16384,
+    //                                      NULL,
+    //                                      1,
+    //                                      &leds_task_handle);
 
     // Set up the event queue
     queue = xQueueCreate(4, sizeof(uint8_t));
 
     // Start the FreeRTOS scheduler
-    if (mpu6050_task_status == pdPASS && crsf_task_status == pdPASS && leds_task_status == pdPASS) {
+    if (mpu6050_task_status == pdPASS && crsf_task_status == pdPASS && motors_task_status == pdPASS) {
         vTaskStartScheduler();
     }
 

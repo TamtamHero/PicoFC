@@ -53,17 +53,21 @@ add_executable(picoFC
         src/tasks/task_crsf.c
         src/tasks/task_mpu6050.c
         src/tasks/task_leds.c
+        src/tasks/task_motors.c
         )
 
 target_include_directories(picoFC PUBLIC
         "${PROJECT_SOURCE_DIR}/drivers"
         )
 
+# generate a header file from the pio source
+pico_generate_pio_header(picoFC ${CMAKE_CURRENT_LIST_DIR}/src/pio/dshot.pio)
+
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm mpu6050 FreeRTOS)
+target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm hardware_pio mpu6050 FreeRTOS)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)
 
-pico_enable_stdio_usb(picoFC 1)
-pico_enable_stdio_uart(picoFC 0)
+# pico_enable_stdio_usb(picoFC 1)
+# pico_enable_stdio_uart(picoFC 0)
