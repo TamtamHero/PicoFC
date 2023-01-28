@@ -69,5 +69,5 @@ target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm hardware_pio 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)
 
-# pico_enable_stdio_usb(picoFC 1)
-# pico_enable_stdio_uart(picoFC 0)
+pico_enable_stdio_usb(picoFC 1)
+pico_enable_stdio_uart(picoFC 0)

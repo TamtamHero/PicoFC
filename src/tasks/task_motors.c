@@ -75,15 +75,18 @@ void task_motors(void* unused_arg){
     uint32_t frame;
     uint16_t power = DSHOT_MIN;
     uint16_t count = 0;
-    while(true){
+    bool error = false;
+    while(!error){
         power = pwm_to_dshot(picoFC_ctx.channels[1]);
         if(picoFC_ctx.channels[4] > PWM_MIN){
-            printf("+++ reset requested +++");
-            watchdog_enable(10, 1);
+            error = true;
+            printf("+++ reset requested +++\n");
+            watchdog_enable(1, 1);
             continue;
         } else if(picoFC_ctx.channels[1] < PWM_MIN || picoFC_ctx.channels[1] > PWM_MAX){
-            printf("+++ invalid pwm value +++");
-            watchdog_enable(10, 1);
+            error = true;
+            printf("+++ invalid pwm value +++\n");
+            watchdog_enable(1, 1);
             continue;
         }
         if(count > 1000){
