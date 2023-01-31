@@ -48,19 +48,19 @@ int main() {
                                          1,
                                          &mpu6050_task_handle);
 
-    BaseType_t crsf_task_status = xTaskCreate(task_crsf,
-                                         "CRSF_TASK",
-                                         16384,
-                                         NULL,
-                                         1,
-                                         &crsf_task_handle);
+    // BaseType_t crsf_task_status = xTaskCreate(task_crsf,
+    //                                      "CRSF_TASK",
+    //                                      16384,
+    //                                      NULL,
+    //                                      1,
+    //                                      &crsf_task_handle);
 
-    BaseType_t motors_task_status = xTaskCreate(task_motors,
-                                         "MOTORS_TASK",
-                                         16384,
-                                         NULL,
-                                         1,
-                                         &motors_task_handle);
+    // BaseType_t motors_task_status = xTaskCreate(task_motors,
+    //                                      "MOTORS_TASK",
+    //                                      16384,
+    //                                      NULL,
+    //                                      1,
+    //                                      &motors_task_handle);
 
     // BaseType_t leds_task_status = xTaskCreate(task_leds,
     //                                      "LEDS_TASK",
@@ -73,7 +73,7 @@ int main() {
     queue = xQueueCreate(4, sizeof(uint8_t));
 
     // Start the FreeRTOS scheduler
-    if (mpu6050_task_status == pdPASS && crsf_task_status == pdPASS && motors_task_status == pdPASS) {
+    if (mpu6050_task_status == pdPASS) { // && crsf_task_status == pdPASS && motors_task_status == pdPASS) {
         vTaskStartScheduler();
     }
 
