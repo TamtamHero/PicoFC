@@ -11,12 +11,14 @@
 
 // PicoFC code
 #include "../sensors/driver_mpu6050_interface.h"
+#include "../sensors/driver_hmc5883l_interface.h"
 
 #define ERROR_MEASUREMENT_ROUNDS 1000
 
 struct mpu6050_error_s {
     float g[3];
     float dps[3];
+    float m_gauss[3];
 };
 
 typedef struct mpu6050_error_s mpu6050_error_t;
@@ -51,8 +53,12 @@ void measure_idle_error(){
     offsets.g[0] = 0.02;
     offsets.g[1] = 0;
     offsets.g[2] = 0.18;
-    printf("MPU6050 avg err: acc.x=%fg,acc.y=%fg,acc.z=%fg - gyro.x=%fdps,gyro.y=%fdps,gyro.z=%fdps\n"
-    , offsets.g[0], offsets.g[1], offsets.g[2], offsets.dps[0], offsets.dps[1], offsets.dps[2]);
+    // constant error approximately measured for magnetometer
+    offsets.m_gauss[0] = 0;
+    offsets.m_gauss[1] = 0;
+    offsets.m_gauss[2] = 0;
+    printf("MPU6050 avg err: acc.x=%fg,acc.y=%fg,acc.z=%fg - gyro.x=%fdps,gyro.y=%fdps,gyro.z=%fdps - mag.x=%f,mag.y=%f,mag.z=%f\n"
+    , offsets.g[0], offsets.g[1], offsets.g[2], offsets.dps[0], offsets.dps[1], offsets.dps[2], offsets.m_gauss[0], offsets.m_gauss[1], offsets.m_gauss[2]);
 }
 
 float compute_orientation_delta(uint64_t dt, float value){
@@ -84,31 +90,36 @@ void update_orientation(float g[3], float dps[3]){
     }
 }
 
-void sense(float g[3], float dps[3]){
-    mpu6050_basic_read(g, dps);
+void sense(float g[3], float dps[3], float m_gauss[3]){
+    // mpu6050_basic_read(g, dps);
+    hmc5883l_basic_read((float *)m_gauss);
 
     // remove sensor error
     for(uint i=0; i<3; i++){
         g[i] = g[i] - offsets.g[i];
         dps[i] = dps[i] - offsets.dps[i];
+        m_gauss[i] = m_gauss[i] - offsets.m_gauss[i];
     }
 }
 
 void task_mpu6050(void* unused_arg){
-    mpu6050_basic_init(MPU6050_I2C_BASE_ADDR);
+    // mpu6050_basic_init(MPU6050_I2C_BASE_ADDR);
+    // sleep_ms(1000);
+    hmc5883l_basic_init();
     sleep_ms(1000);
     init_orientation_tracking();
 
     float g[3];
     float dps[3];
+    float m_gauss[3];
     float degrees;
     uint count = 0;
     measure_idle_error();
     while (1) {
 
-        sense(g, dps);
+        sense(g, dps, m_gauss);
         update_orientation(g, dps);
-        mpu6050_basic_read_temperature(&degrees);
+        // mpu6050_basic_read_temperature(&degrees);
         if(degrees > 31){
             printf("++++ ERROR DISCONNECTED MPU6050\n");
         }
@@ -126,9 +137,10 @@ void task_mpu6050(void* unused_arg){
         uint new_count = (prev_time - start_time)/5000; // count increases every 0.05s
         if(new_count > count){
             count = new_count;
-            printf("{\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f}\n"
+            printf("{\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"mx\":%f,\"my\":%f,\"mz\":%f}\n"
             , cur_orientation.ang_x, cur_orientation.ang_y, cur_orientation.ang_z
-            , g[0], g[1], g[2]);
+            , g[0], g[1], g[2]
+            , m_gauss[0], m_gauss[1], m_gauss[2]);
         }
     }
 }

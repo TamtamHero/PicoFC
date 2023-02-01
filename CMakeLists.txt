@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
+set(PICO_SDK_PATH "/home/jean/projects/pico/picoFC/pico-sdk")
+
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
 
@@ -48,6 +50,7 @@ add_subdirectory(drivers)
 add_executable(picoFC
         src/main.c
         src/sensors/driver_mpu6050_interface.c
+        src/sensors/driver_hmc5883l_interface.c
         src/radio/crsf.c
         src/misc/crc8.c
         src/tasks/task_crsf.c
@@ -64,10 +67,10 @@ target_include_directories(picoFC PUBLIC
 pico_generate_pio_header(picoFC ${CMAKE_CURRENT_LIST_DIR}/src/pio/dshot.pio)
 
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm hardware_pio mpu6050 FreeRTOS)
+target_link_libraries(picoFC pico_stdlib hardware_i2c hardware_pwm hardware_pio mpu6050 hmc5883l FreeRTOS)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(picoFC)
 
-pico_enable_stdio_usb(picoFC 1)
-pico_enable_stdio_uart(picoFC 0)
+pico_enable_stdio_usb(picoFC 0)
+pico_enable_stdio_uart(picoFC 1)
