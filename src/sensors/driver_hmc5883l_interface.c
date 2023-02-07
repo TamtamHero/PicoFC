@@ -104,12 +104,12 @@ uint8_t hmc5883l_interface_iic_read(uint8_t addr, uint8_t reg, uint8_t *buf, uin
  *            - 1 write failed
  * @note      none
  */
-uint8_t buf[50]; // somehow we have to send it all at once...
+uint8_t request[50]; // somehow we have to send it all at once...
 uint8_t hmc5883l_interface_iic_write(uint8_t addr, uint8_t reg, uint8_t *buf, uint16_t len)
 {
-    buf[0] = reg;
-    memcpy(buf+1, buf, len);
-    i2c_write_blocking(i2c_default, addr, buf, len+1, false);
+    request[0] = reg;
+    memcpy(request+1, buf, len);
+    i2c_write_blocking(i2c_default, addr, request, len+1, false);
     return 0;
 }
 
@@ -157,18 +157,9 @@ uint8_t hmc5883l_basic_init(void)
     DRIVER_HMC5883L_LINK_DELAY_MS(&hmc5883l_handle, hmc5883l_interface_delay_ms);
     DRIVER_HMC5883L_LINK_DEBUG_PRINT(&hmc5883l_handle, hmc5883l_interface_debug_print);
 
-    hmc5883l_handle.inited = 1;
-
-    hmc5883l_handle_t lol;
-    memcpy(&lol, &hmc5883l_handle, sizeof(hmc5883l_handle));
-
-    hmc5883l_interface_debug_print("hmc5883l: dump\n");
-    for (size_t i = 0; i < 28; i++){
-        hmc5883l_interface_debug_print("%u\n", ((uint8_t*)&lol)[i]);
-    }
-    hmc5883l_interface_debug_print(":%u\n", hmc5883l_handle.inited);
-
     hmc5883l_interface_debug_print("hmc5883l: init started\n");
+
+    uint8_t mode = 0, status = 0;
 
     /* hmc5883l init */
     res = hmc5883l_init(&hmc5883l_handle);
@@ -219,16 +210,6 @@ uint8_t hmc5883l_basic_init(void)
         return 1;
     }
 
-    /* set enable high speed iic */
-    res = hmc5883l_enable_high_speed_iic(&hmc5883l_handle);
-    if (res != 0)
-    {
-        hmc5883l_interface_debug_print("hmc5883l: enable high speed iic failed.\n");
-        (void)hmc5883l_deinit(&hmc5883l_handle);
-
-        return 1;
-    }
-
     /* start continuous read */
     res = hmc5883l_start_continuous_read(&hmc5883l_handle);
     if (res != 0)
@@ -239,7 +220,9 @@ uint8_t hmc5883l_basic_init(void)
         return 1;
     }
 
-    hmc5883l_interface_debug_print("hmc5883l: init done.\n");
+    res = hmc5883l_handle.iic_read(0x1E, 0x02, (uint8_t *)&mode, 1);
+    res = hmc5883l_handle.iic_read(0x1E, 0x09, (uint8_t *)&status, 1);
+    hmc5883l_interface_debug_print("hmc5883l: init done. mode:%u status:%u\n", mode, status);
 
     return 0;
 }
