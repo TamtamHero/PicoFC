@@ -14,8 +14,9 @@
 #include "../sensors/driver_hmc5883l_interface.h"
 
 #define ERROR_MEASUREMENT_ROUNDS 1000
-#define GYRO_COMPLEMENTARY_COEFF 0.95
+#define GYRO_COMPLEMENTARY_COEFF 0.98
 #define EARTH_G 1.0
+#define RAD_TO_DEG (180/M_PI)
 
 struct mpu6050_error_s {
     float g[3];
@@ -82,23 +83,30 @@ bool in_boundaries(float target, float value, float tolerance, bool percentage){
     }
 }
 
-/* return an angle adapted to the target angle
-eg:
-target_angle = -5°, angle = 280° -> return -80°
-target_angle = -5°, angle = -80° -> return -80°
+/* return an angle in [-pi°, pi°]
 */
-float normalize_angle(float target_angle, float angle, float tolerance){
-    if(!in_boundaries(target_angle, angle, tolerance, false)){
-        if(in_boundaries(target_angle, angle+360.0, tolerance, false)){
-            return angle + 360.0;
-        }
+float normalize_angle(float angle){
+    angle = fmod(angle, 360.0);
+    if(angle < -180.0){
+        angle += 360.0;
+    }
+    else if(angle > 180){
+        angle  -= 360.0;
     }
     return angle;
 }
 
-// float normalize_roll(float angle){
-//     if(angle )
-// }
+float angle_weighted_average(float a1, float a2, float coeff_a1){
+    a1 = normalize_angle(a1);
+    a2 = normalize_angle(a2);
+    if((a1 < 0) ^ (a2 < 0) && fabs(a1) + fabs(a2) > 180.0){
+        if(a1 < 0)
+            a1 += 360.0;
+        if(a2 < 0)
+            a2 += 360.0;
+    }
+    return normalize_angle(a1*coeff_a1+a2*(1.0-coeff_a1));
+}
 
 void init_orientation_tracking(){
     start_time = time_us_64();
@@ -117,43 +125,41 @@ void update_orientation(float g[3], float dps[3]){
     uint64_t time_increment = cur_time - prev_time;
     if(time_increment > 0){
         // gyroscope data
-        cur_orientation.ang_x += compute_orientation_delta(time_increment, dps[0]);
-        cur_orientation.ang_y += compute_orientation_delta(time_increment, -dps[1]);
-        cur_orientation.ang_z += compute_orientation_delta(time_increment, dps[2]);
+        cur_orientation.ang_x = normalize_angle(cur_orientation.ang_x + compute_orientation_delta(time_increment, dps[0]));
+        cur_orientation.ang_y = normalize_angle(cur_orientation.ang_y + compute_orientation_delta(time_increment, -dps[1]));
+        cur_orientation.ang_z = normalize_angle(cur_orientation.ang_z + compute_orientation_delta(time_increment, dps[2]));
         // cur_orientation.ang_z = 0;
 
         // use accelerometer data only when drone experience a total acceleration of 1g ±1%
         float acc_total = sqrt(pow(AX, 2) + pow(AY, 2) + pow(AZ, 2));
+        flag_az_rectified = 0;
         if(in_boundaries(EARTH_G, acc_total, 1.0, true)){
-            // float acc_ang_x = 90.0 - acos(AY/acc_total)*180/M_PI;
-            // float acc_ang_y = 90.0 - acos(AX/acc_total)*180/M_PI;
-            // float acc_ang_x = atan(AY_N/(sqrt(pow(AX_N, 2) + pow(AZ_N, 2))))*180/M_PI;
-            // float acc_ang_z = atan(AX_N/(sqrt(pow(AY_N, 2) + pow(AZ_N, 2))))*180/M_PI;
-            float z_sign = AZ >= 0 ? 1 : -1;
-            float acc_ang_x = atan2(AY,z_sign*sqrt(pow(AZ, 2)+pow(AX, 2)*0.01))*180/M_PI;
-            float acc_ang_y = atan2(AX,sqrt(pow(AY_N, 2) + pow(AZ_N, 2)))*180/M_PI;
+            // float acc_ang_x = 90.0 - acos(AY/acc_total)*RAD_TO_DEG;
+            // float acc_ang_y = 90.0 - acos(AX/acc_total)*RAD_TO_DEG;
+            // float acc_ang_x = atan2(AY_N,(sqrt(pow(AX_N, 2) + pow(AZ_N, 2))))*RAD_TO_DEG;
+            // float acc_ang_y = atan(AX_N/(sqrt(pow(AY_N, 2) + pow(AZ_N, 2))))*RAD_TO_DEG;
+            // float z_sign = AZ >= 0 ? 1 : -1;
+            // float acc_ang_x = atan2(AY,z_sign*sqrt(pow(AZ, 2)+pow(AX, 2)*0.01))*RAD_TO_DEG;
+            // float acc_ang_y = atan(AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
 
-            // normalize angles in range [0°:360°]
-            // acc_ang_x = normalize_angle(cur_orientation.ang_y, acc_ang_y, 90.0);
-            // acc_ang_y = normalize_angle(cur_orientation.ang_x, acc_ang_x, 90.0);
-            /* fuse accelerometer data when accelerometer oreintation differ from gyro less than 25% (90°), to avoid
-            mistaking a sudden though improbable 1h30 acceleration for earth G            */
-            if(in_boundaries(cur_orientation.ang_x, acc_ang_x, 90.0, false) && in_boundaries(cur_orientation.ang_y, acc_ang_y, 90.0, false)){
-                cur_orientation.ang_x = cur_orientation.ang_x * GYRO_COMPLEMENTARY_COEFF + acc_ang_x * (1-GYRO_COMPLEMENTARY_COEFF);
-                cur_orientation.ang_y = cur_orientation.ang_y * GYRO_COMPLEMENTARY_COEFF + acc_ang_y * (1-GYRO_COMPLEMENTARY_COEFF);
+            if(AZ > 0.5){
+                float acc_ang_x = atan2(AY,AZ)*RAD_TO_DEG;
+                float acc_ang_y = atan(AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
+                cur_orientation.ang_x = angle_weighted_average(cur_orientation.ang_x, acc_ang_x, GYRO_COMPLEMENTARY_COEFF);
+                cur_orientation.ang_y = angle_weighted_average(cur_orientation.ang_y, acc_ang_y, GYRO_COMPLEMENTARY_COEFF);
                 flag_az_rectified = 1;
             }
-        }
-        else{
-            flag_az_rectified = 0;
         }
 
         prev_time = cur_time;
     }
 }
 
-void sense(float g[3], float dps[3], float m_gauss[3]){
+void sense(float g[3], float dps[3], float m_gauss[3], float* temp){
     mpu6050_basic_read(g, dps);
+    if(mpu6050_basic_read_temperature(temp)){
+        printf("++++ ERROR DISCONNECTED MPU6050\n");
+    }
     // hmc5883l_basic_read(m_gauss);
 
     // remove sensor error
@@ -174,17 +180,13 @@ void task_mpu6050(void* unused_arg){
     float g[3];
     float dps[3];
     float m_gauss[3];
-    float degrees;
+    float temp;
     uint count = 0;
     measure_idle_error();
     while (1) {
 
-        sense(g, dps, m_gauss);
+        sense(g, dps, m_gauss, &temp);
         update_orientation(g, dps);
-        mpu6050_basic_read_temperature(&degrees);
-        if(degrees > 31){
-            printf("++++ ERROR DISCONNECTED MPU6050\n");
-        }
 
         /* output */
         // mpu6050_interface_debug_print("mpu6050: %d.\n", count + 1);
@@ -194,13 +196,13 @@ void task_mpu6050(void* unused_arg){
         // mpu6050_interface_debug_print("mpu6050: gyro x is %0.2fdps.\n", dps[0]);
         // mpu6050_interface_debug_print("mpu6050: gyro y is %0.2fdps.\n", dps[1]);
         // mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
-        // mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", degrees);
+        // mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", temp);
 
         uint new_count = (prev_time - start_time)/25000; // count increases 40 times per second
         if(new_count > count){
             count = new_count;
             printf("{\"T\":%.2f,\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"mx\":%.2f,\"my\":%.2f,\"mz\":%.2f,\"rec\":%s}\n"
-            , degrees
+            , temp
             , cur_orientation.ang_x, cur_orientation.ang_y, cur_orientation.ang_z
             , g[0], g[1], g[2]
             , m_gauss[0], m_gauss[1], m_gauss[2]
