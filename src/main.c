@@ -43,7 +43,7 @@ int main() {
     // NOTE Arg 3 is the stack depth -- in words (4 bytes)
     BaseType_t mpu6050_task_status = xTaskCreate(task_mpu6050,
                                          "MPU6050_TASK",
-                                         2048,
+                                         2*2048,
                                          NULL,
                                          1,
                                          &mpu6050_task_handle);
@@ -55,12 +55,12 @@ int main() {
     //                                      1,
     //                                      &crsf_task_handle);
 
-    // BaseType_t motors_task_status = xTaskCreate(task_motors,
-    //                                      "MOTORS_TASK",
-    //                                      16384,
-    //                                      NULL,
-    //                                      1,
-    //                                      &motors_task_handle);
+    BaseType_t motors_task_status = xTaskCreate(task_motors,
+                                         "MOTORS_TASK",
+                                         16384,
+                                         NULL,
+                                         1,
+                                         &motors_task_handle);
 
     // BaseType_t leds_task_status = xTaskCreate(task_leds,
     //                                      "LEDS_TASK",

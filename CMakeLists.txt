@@ -52,7 +52,9 @@ add_executable(picoFC
         src/sensors/driver_mpu6050_interface.c
         src/sensors/driver_hmc5883l_interface.c
         src/radio/crsf.c
-        src/misc/crc8.c
+        src/misc/misc.c
+        src/esc/esc.c
+        src/control/control.c
         src/tasks/task_crsf.c
         src/tasks/task_mpu6050.c
         src/tasks/task_leds.c

@@ -1,4 +1,4 @@
-#include "crc8.h"
+#include "misc.h"
 
 uint8_t crc8_calc(uint8_t crc, unsigned char a)
 {

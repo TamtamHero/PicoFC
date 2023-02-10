@@ -19,40 +19,32 @@
 
 // PicoFC code
 #include "../context.h"
+#include "../esc/esc.h"
+#include "../control/control.h"
 
-#define NUM_MOTORS 4
-uint8_t motor_pins[NUM_MOTORS] = {15, 26, 27, 28};
+void parse_channels(){
+    bool reset_request = picoFC_ctx.channels[4] > PWM_MIN;
+    uint16_t throttle = pwm_to_dshot(picoFC_ctx.channels[1]);
+    float pitch = pwm_to_angle(picoFC_ctx.channels[2]);
+    float roll = pwm_to_angle(picoFC_ctx.channels[0]);
+    float yaw = pwm_to_angle(picoFC_ctx.channels[3]);
 
-#define PWM_MIN              (988)
-#define PWM_MAX              (2012)
-#define DSHOT_MIN              (48)
-#define DSHOT_MAX              (2047)
-
-#define COEFF_A ((float)(DSHOT_MAX-DSHOT_MIN)/(PWM_MAX-PWM_MIN))
-#define COEFF_B (DSHOT_MAX - (COEFF_A * PWM_MAX))
-/*Scale pwm values from 988us - 2012us to dshot values (48 - 2047)
-988us -> 48
-2012us -> 2047
-
-dshot(pwm) = a.pwm + b
-a = (2047-48)/(2012-988) ~= 1.952
-b = 2047 - (a * 2012) ~= -1880
-*/
-uint16_t pwm_to_dshot(uint16_t pwm){
-    return (uint16_t)(COEFF_A * pwm + COEFF_B);
-}
-
-uint16_t get_dshot_frame(uint16_t command){
-    //compute the checksum. xor the three nibbles of the speed + the telemetry bit (not used here)
-    uint16_t checksum = 0;
-    uint16_t checksum_data = command << 1;
-    for(uint8_t i=0; i < 3; i++) {
-        checksum ^= checksum_data;
-        checksum_data >>= 4;
+    if(reset_request){
+        printf("+++ reset requested +++\n");
+    } else if(throttle < DSHOT_MIN || throttle > DSHOT_MAX){
+        printf("+++ invalid dshot value for throttle +++\n");
+    } else{
+        picoFC_ctx.command.throttle = throttle;
+        picoFC_ctx.command.pitch = pitch;
+        picoFC_ctx.command.roll = roll;
+        picoFC_ctx.command.yaw = yaw;
+        return;
     }
-    checksum &= 0x000F; //we only use the least-significant four bits as checksum
-    uint16_t dshot_frame = (command << 5) | checksum; //add in the checksum bits to the least-four-significant bits
-    return dshot_frame;
+
+    // in case of error, trigger reset watchdog and set throttle to 0;
+    watchdog_enable(1, 1);
+    picoFC_ctx.command.throttle = DSHOT_MIN;
+    return;
 }
 
 void task_motors(void* unused_arg){
@@ -67,34 +59,39 @@ void task_motors(void* unused_arg){
     }
 
     // leave some time to get my hands out of the copter
-    sleep_ms(5000);
+    sleep_ms(3000);
 
-    // sleep 1ms between each update to motor speed
-    const TickType_t xDelay = 1 / portTICK_PERIOD_MS;
+    // sleep 4ms between each update to motor speed
+    const TickType_t xDelay = 4 / portTICK_PERIOD_MS;
 
     uint32_t frame;
-    uint16_t power = DSHOT_MIN;
     uint16_t count = 0;
-    bool error = false;
-    while(!error){
-        power = pwm_to_dshot(picoFC_ctx.channels[1]);
-        if(picoFC_ctx.channels[4] > PWM_MIN){
-            error = true;
-            printf("+++ reset requested +++\n");
-            watchdog_enable(1, 1);
-            continue;
-        } else if(picoFC_ctx.channels[1] < PWM_MIN || picoFC_ctx.channels[1] > PWM_MAX){
-            error = true;
-            printf("+++ invalid pwm value +++\n");
-            watchdog_enable(1, 1);
-            continue;
-        }
-        if(count > 1000){
+    uint16_t motor_target[NUM_MOTORS];
+    uint64_t prev_time = time_us_64();
+    while(true){
+        // hardcode channels for tests:
+        picoFC_ctx.channels[1] = 1050; // ~25% throttle
+        picoFC_ctx.channels[0] = 1500; // 0°
+        picoFC_ctx.channels[2] = 1500;
+        picoFC_ctx.channels[3] = 1500;
+        picoFC_ctx.channels[4] = PWM_MIN;
+
+        parse_channels();
+
+        uint64_t current_time = time_us_64();
+        update_pid(motor_target, ((float)(current_time-prev_time) / 1000000.0));
+        prev_time = current_time;
+
+        // every 0.5s
+        if(count > 125){
             count = 0;
-            printf("power: %d %d\n", power, picoFC_ctx.channels[1]);
+            // printf("throttle: dshot:%d pwm:%d\n", picoFC_ctx.command.throttle, picoFC_ctx.channels[1]);
+            // printf("1:%u 2:%u 3:%u 4:%u x:%f y:%f z:%f\n", motor_target[0], motor_target[1], motor_target[2], motor_target[3],
+            // picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z);
         }
-        frame = (uint32_t)get_dshot_frame(power);
+
         for (int i = 0; i < NUM_MOTORS; ++i) {
+            frame = (uint32_t)get_dshot_frame(motor_target[i]);
             pio_sm_put_blocking(pio0, sm+i, frame << 16u);
         }
 

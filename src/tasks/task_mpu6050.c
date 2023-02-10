@@ -12,6 +12,7 @@
 // PicoFC code
 #include "../sensors/driver_mpu6050_interface.h"
 #include "../sensors/driver_hmc5883l_interface.h"
+#include "../context.h"
 
 #define ERROR_MEASUREMENT_ROUNDS 1000
 #define GYRO_COMPLEMENTARY_COEFF 0.98
@@ -28,23 +29,13 @@ typedef struct mpu6050_error_s mpu6050_error_t;
 
 mpu6050_error_t offsets;
 
-struct orientation_s {
-    float ang_x; // pitch
-    float ang_y; // roll
-    float ang_z; // yaw
-};
-
-typedef struct orientation_s orientation_t;
-
-orientation_t cur_orientation = {0};
-
 uint64_t start_time;
 uint64_t prev_time;
 
 // set to 1 every time the accelerometer's measurement are used to rectify pitch and roll
 uint8_t flag_az_rectified = 0;
 
-
+// #define REAL
 // Measure average 0 error when device is idle so we can offset it afterward
 void measure_idle_error(){
     float g[3];
@@ -57,9 +48,18 @@ void measure_idle_error(){
     sleep_ms(1);
     }
     // constant error approximately measured for accelerometer
+    #ifdef REAL
+    offsets.g[0] = 0.049072;
+    offsets.g[1] = -0.038574;
+    offsets.g[2] = 0.250732;
+    #else
     offsets.g[0] = 0.02;
     offsets.g[1] = 0;
     offsets.g[2] = 0.18;
+    #endif
+    // offsets.g[0] = 0;
+    // offsets.g[1] = 0;
+    // offsets.g[2] = 0;
     // constant error approximately measured for magnetometer
     offsets.m_gauss[0] = 0;
     offsets.m_gauss[1] = 0;
@@ -125,10 +125,10 @@ void update_orientation(float g[3], float dps[3]){
     uint64_t time_increment = cur_time - prev_time;
     if(time_increment > 0){
         // gyroscope data
-        cur_orientation.ang_x = normalize_angle(cur_orientation.ang_x + compute_orientation_delta(time_increment, dps[0]));
-        cur_orientation.ang_y = normalize_angle(cur_orientation.ang_y + compute_orientation_delta(time_increment, -dps[1]));
-        cur_orientation.ang_z = normalize_angle(cur_orientation.ang_z + compute_orientation_delta(time_increment, dps[2]));
-        // cur_orientation.ang_z = 0;
+        float gyro_ang_x = normalize_angle(picoFC_ctx.orientation.ang_x + compute_orientation_delta(time_increment, dps[0]));
+        float gyro_ang_y = normalize_angle(picoFC_ctx.orientation.ang_y + compute_orientation_delta(time_increment, -dps[1]));
+        picoFC_ctx.orientation.ang_z = normalize_angle(picoFC_ctx.orientation.ang_z + compute_orientation_delta(time_increment, dps[2]));
+        // picoFC_ctx.orientation.ang_z = 0;
 
         // use accelerometer data only when drone experience a total acceleration of 1g ±1%
         float acc_total = sqrt(pow(AX, 2) + pow(AY, 2) + pow(AZ, 2));
@@ -145,10 +145,13 @@ void update_orientation(float g[3], float dps[3]){
             if(AZ > 0.5){
                 float acc_ang_x = atan2(AY,AZ)*RAD_TO_DEG;
                 float acc_ang_y = atan(AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
-                cur_orientation.ang_x = angle_weighted_average(cur_orientation.ang_x, acc_ang_x, GYRO_COMPLEMENTARY_COEFF);
-                cur_orientation.ang_y = angle_weighted_average(cur_orientation.ang_y, acc_ang_y, GYRO_COMPLEMENTARY_COEFF);
+                picoFC_ctx.orientation.ang_x = angle_weighted_average(gyro_ang_x, acc_ang_x, GYRO_COMPLEMENTARY_COEFF);
+                picoFC_ctx.orientation.ang_y = angle_weighted_average(gyro_ang_y, acc_ang_y, GYRO_COMPLEMENTARY_COEFF);
                 flag_az_rectified = 1;
             }
+        } else {
+            picoFC_ctx.orientation.ang_x = gyro_ang_x;
+            picoFC_ctx.orientation.ang_y = gyro_ang_y;
         }
 
         prev_time = cur_time;
@@ -164,13 +167,19 @@ void sense(float g[3], float dps[3], float m_gauss[3], float* temp){
 
     // remove sensor error
     for(uint i=0; i<3; i++){
+        #ifdef REAL
+        g[i] = g[i]*2 - offsets.g[i];
+        #else
         g[i] = g[i] - offsets.g[i];
+        #endif
         dps[i] = dps[i] - offsets.dps[i];
-        m_gauss[i] = m_gauss[i] - offsets.m_gauss[i];
+        // m_gauss[i] = m_gauss[i] - offsets.m_gauss[i];
     }
 }
 
 void task_mpu6050(void* unused_arg){
+    printf("=== hello from mpu6050! \n");
+
     mpu6050_basic_init(MPU6050_I2C_BASE_ADDR);
     sleep_ms(1000);
     // hmc5883l_basic_init();
@@ -201,11 +210,11 @@ void task_mpu6050(void* unused_arg){
         uint new_count = (prev_time - start_time)/25000; // count increases 40 times per second
         if(new_count > count){
             count = new_count;
-            printf("{\"T\":%.2f,\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"mx\":%.2f,\"my\":%.2f,\"mz\":%.2f,\"rec\":%s}\n"
+            printf("{\"T\":%.2f,\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"rec\":%s}\n"
             , temp
-            , cur_orientation.ang_x, cur_orientation.ang_y, cur_orientation.ang_z
+            , picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z
             , g[0], g[1], g[2]
-            , m_gauss[0], m_gauss[1], m_gauss[2]
+            // , m_gauss[0], m_gauss[1], m_gauss[2]
             , flag_az_rectified ? "\"+++\"" : "\"\"");
         }
     }

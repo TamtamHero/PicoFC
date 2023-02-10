@@ -20,3 +20,4 @@ Makefile
 *.hex
 *.uf2
 *.a
+drivers/hmc5883l

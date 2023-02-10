@@ -8,7 +8,7 @@
 #include "hardware/uart.h"
 
 // PicoFC code
-#include "../misc/crc8.h"
+#include "../misc/misc.h"
 #include "../context.h"
 
 uint8_t rx_buffer[100];
@@ -91,7 +91,7 @@ void crsf_handle_message(crsf_addr_e addr, crsf_type_e type, crsf_msg_t* msg){
                 break;
 
             default:
-                printf("Error: payload type %02x is not supported\n", type);
+                // printf("Error: payload type %02x is not supported\n", type);
                 break;
             }
         }
@@ -189,7 +189,7 @@ void crsf_parser(uint8_t* buffer, size_t len){
 
         // if done with frame, prepare for next one
         if(cur_frame.state == CRSF_STATE_FINALIZED){
-            printf("*");
+            // printf("*");
             crsf_handle_message(cur_frame.address, cur_frame.type, &cur_frame.payload.msg);
             memset(&cur_frame, 0, sizeof(cur_frame));
         }
