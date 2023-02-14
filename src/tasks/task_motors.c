@@ -43,7 +43,7 @@ void parse_channels(){
 
     // in case of error, trigger reset watchdog and set throttle to 0;
     watchdog_enable(1, 1);
-    picoFC_ctx.command.throttle = DSHOT_MIN;
+    // picoFC_ctx.command.throttle = DSHOT_MIN; // dangerous !
     return;
 }
 
@@ -61,8 +61,8 @@ void task_motors(void* unused_arg){
     // leave some time to get my hands out of the copter
     sleep_ms(3000);
 
-    // sleep 4ms between each update to motor speed
-    const TickType_t xDelay = 4 / portTICK_PERIOD_MS;
+    // sleep 1ms between each update to motor speed
+    const TickType_t xDelay = 1 / portTICK_PERIOD_MS;
 
     uint32_t frame;
     uint16_t count = 0;
@@ -70,11 +70,11 @@ void task_motors(void* unused_arg){
     uint64_t prev_time = time_us_64();
     while(true){
         // hardcode channels for tests:
-        picoFC_ctx.channels[1] = 1050; // ~25% throttle
+        // picoFC_ctx.channels[1] = 1225; // ~25% throttle
         picoFC_ctx.channels[0] = 1500; // 0°
         picoFC_ctx.channels[2] = 1500;
         picoFC_ctx.channels[3] = 1500;
-        picoFC_ctx.channels[4] = PWM_MIN;
+        // picoFC_ctx.channels[4] = PWM_MIN;
 
         parse_channels();
 
@@ -82,12 +82,12 @@ void task_motors(void* unused_arg){
         update_pid(motor_target, ((float)(current_time-prev_time) / 1000000.0));
         prev_time = current_time;
 
-        // every 0.5s
-        if(count > 125){
+        // every 0.25s
+        if(count > 250){
             count = 0;
             // printf("throttle: dshot:%d pwm:%d\n", picoFC_ctx.command.throttle, picoFC_ctx.channels[1]);
-            // printf("1:%u 2:%u 3:%u 4:%u x:%f y:%f z:%f\n", motor_target[0], motor_target[1], motor_target[2], motor_target[3],
-            // picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z);
+            printf("%u %u\n%u %u      /  x:%f y:%f z:%f\n", motor_target[3], motor_target[2], motor_target[0], motor_target[1],
+            picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z);
         }
 
         for (int i = 0; i < NUM_MOTORS; ++i) {

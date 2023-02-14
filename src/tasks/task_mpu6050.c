@@ -35,7 +35,7 @@ uint64_t prev_time;
 // set to 1 every time the accelerometer's measurement are used to rectify pitch and roll
 uint8_t flag_az_rectified = 0;
 
-// #define REAL
+#define REAL
 // Measure average 0 error when device is idle so we can offset it afterward
 void measure_idle_error(){
     float g[3];
@@ -49,9 +49,9 @@ void measure_idle_error(){
     }
     // constant error approximately measured for accelerometer
     #ifdef REAL
-    offsets.g[0] = 0.049072;
-    offsets.g[1] = -0.038574;
-    offsets.g[2] = 0.250732;
+    offsets.g[0] = 0.0550274; // 0.0350274; // at T=31°  // 0.049072
+    offsets.g[1] = -0.050346; // -0.043346; // -0.038574;
+    offsets.g[2] = 0.2364060; // 0.2394060; //0.250732;
     #else
     offsets.g[0] = 0.02;
     offsets.g[1] = 0;
@@ -125,15 +125,15 @@ void update_orientation(float g[3], float dps[3]){
     uint64_t time_increment = cur_time - prev_time;
     if(time_increment > 0){
         // gyroscope data
-        float gyro_ang_x = normalize_angle(picoFC_ctx.orientation.ang_x + compute_orientation_delta(time_increment, dps[0]));
-        float gyro_ang_y = normalize_angle(picoFC_ctx.orientation.ang_y + compute_orientation_delta(time_increment, -dps[1]));
+        picoFC_ctx.orientation.ang_x = normalize_angle(picoFC_ctx.orientation.ang_x + compute_orientation_delta(time_increment, dps[0]));
+        picoFC_ctx.orientation.ang_y = normalize_angle(picoFC_ctx.orientation.ang_y + compute_orientation_delta(time_increment, dps[1]));
         picoFC_ctx.orientation.ang_z = normalize_angle(picoFC_ctx.orientation.ang_z + compute_orientation_delta(time_increment, dps[2]));
         // picoFC_ctx.orientation.ang_z = 0;
 
         // use accelerometer data only when drone experience a total acceleration of 1g ±1%
         float acc_total = sqrt(pow(AX, 2) + pow(AY, 2) + pow(AZ, 2));
         flag_az_rectified = 0;
-        if(in_boundaries(EARTH_G, acc_total, 1.0, true)){
+        if(in_boundaries(EARTH_G, acc_total, 1.0, true) && AZ > 0.5){
             // float acc_ang_x = 90.0 - acos(AY/acc_total)*RAD_TO_DEG;
             // float acc_ang_y = 90.0 - acos(AX/acc_total)*RAD_TO_DEG;
             // float acc_ang_x = atan2(AY_N,(sqrt(pow(AX_N, 2) + pow(AZ_N, 2))))*RAD_TO_DEG;
@@ -142,16 +142,12 @@ void update_orientation(float g[3], float dps[3]){
             // float acc_ang_x = atan2(AY,z_sign*sqrt(pow(AZ, 2)+pow(AX, 2)*0.01))*RAD_TO_DEG;
             // float acc_ang_y = atan(AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
 
-            if(AZ > 0.5){
-                float acc_ang_x = atan2(AY,AZ)*RAD_TO_DEG;
-                float acc_ang_y = atan(AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
-                picoFC_ctx.orientation.ang_x = angle_weighted_average(gyro_ang_x, acc_ang_x, GYRO_COMPLEMENTARY_COEFF);
-                picoFC_ctx.orientation.ang_y = angle_weighted_average(gyro_ang_y, acc_ang_y, GYRO_COMPLEMENTARY_COEFF);
-                flag_az_rectified = 1;
-            }
-        } else {
-            picoFC_ctx.orientation.ang_x = gyro_ang_x;
-            picoFC_ctx.orientation.ang_y = gyro_ang_y;
+            float acc_ang_x = atan2(AY,AZ)*RAD_TO_DEG;
+            float acc_ang_y = atan(-AX/sqrt(pow(AY, 2) + pow(AZ, 2)))*RAD_TO_DEG;
+            picoFC_ctx.orientation.ang_x = angle_weighted_average(picoFC_ctx.orientation.ang_x, acc_ang_x, GYRO_COMPLEMENTARY_COEFF);
+            picoFC_ctx.orientation.ang_y = angle_weighted_average(picoFC_ctx.orientation.ang_y, acc_ang_y, GYRO_COMPLEMENTARY_COEFF);
+            flag_az_rectified = 1;
+
         }
 
         prev_time = cur_time;
@@ -207,15 +203,16 @@ void task_mpu6050(void* unused_arg){
         // mpu6050_interface_debug_print("mpu6050: gyro z is %0.2fdps.\n", dps[2]);
         // mpu6050_interface_debug_print("mpu6050: temperature %0.2fC.\n", temp);
 
-        uint new_count = (prev_time - start_time)/25000; // count increases 40 times per second
-        if(new_count > count){
-            count = new_count;
-            printf("{\"T\":%.2f,\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"rec\":%s}\n"
-            , temp
-            , picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z
-            , g[0], g[1], g[2]
-            // , m_gauss[0], m_gauss[1], m_gauss[2]
-            , flag_az_rectified ? "\"+++\"" : "\"\"");
-        }
+        // uint new_count = (prev_time - start_time)/25000; // count increases 40 times per second
+        // if(new_count > count){
+        //     count = new_count;
+        //     printf("{\"T\":%.2f,\"x\":%f,\"y\":%f,\"z\":%f,\"ax\":%f,\"ay\":%f,\"az\":%f,\"rec\":%s}\n"
+        //     , temp
+        //     , picoFC_ctx.orientation.ang_x, picoFC_ctx.orientation.ang_y, picoFC_ctx.orientation.ang_z
+        //     , g[0], g[1], g[2]
+        //     // , m_gauss[0], m_gauss[1], m_gauss[2]
+        //     , flag_az_rectified ? "\"+++\"" : "\"\"");
+        // }
+        sleep_ms(1);
     }
 }

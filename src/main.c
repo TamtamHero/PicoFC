@@ -48,12 +48,12 @@ int main() {
                                          1,
                                          &mpu6050_task_handle);
 
-    // BaseType_t crsf_task_status = xTaskCreate(task_crsf,
-    //                                      "CRSF_TASK",
-    //                                      16384,
-    //                                      NULL,
-    //                                      1,
-    //                                      &crsf_task_handle);
+    BaseType_t crsf_task_status = xTaskCreate(task_crsf,
+                                         "CRSF_TASK",
+                                         16384,
+                                         NULL,
+                                         1,
+                                         &crsf_task_handle);
 
     BaseType_t motors_task_status = xTaskCreate(task_motors,
                                          "MOTORS_TASK",

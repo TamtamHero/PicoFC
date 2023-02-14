@@ -28,9 +28,9 @@ float pwm_to_angle(uint16_t pwm){
 #define PITCH 0
 #define ROLL 1
 #define YAW 2
-#define P_PITCH 0.6
-#define I_PITCH 3.5
-#define D_PITCH 0.03
+#define P_PITCH 12 // 12
+#define I_PITCH 0.03
+#define D_PITCH 1.4 // 1.4
 #define P_ROLL P_PITCH
 #define I_ROLL I_PITCH
 #define D_ROLL D_PITCH
@@ -53,6 +53,7 @@ void update_pid(uint16_t motor_target[NUM_MOTORS], float time_interval){
     // for each euler angle
     for (size_t i = 0; i < 3; i++){
         angle_error_integral[i] += (prev_angle_error[i] + angle_error[i])*time_interval/2;
+        angle_error_integral[i] = angle_error_integral[i] > 200 ? 200 : angle_error_integral[i] < -200 ? -200 : angle_error_integral[i];
         float error_slope = (angle_error[i] - prev_angle_error[i])/time_interval;
         pid_offset[i] = P[i] * angle_error[i] + I[i] * angle_error_integral[i] + D[i] * error_slope;
     }
@@ -61,15 +62,15 @@ void update_pid(uint16_t motor_target[NUM_MOTORS], float time_interval){
     memcpy(prev_angle_error, angle_error, sizeof(prev_angle_error));
 
     // adapt motor speeds
-    motor_target[0] = (uint16_t)(picoFC_ctx.command.throttle - pid_offset[PITCH] - pid_offset[ROLL]);// - pid_offset[YAW]);
-    motor_target[1] = (uint16_t)(picoFC_ctx.command.throttle + pid_offset[PITCH] - pid_offset[ROLL]);// + pid_offset[YAW]);
-    motor_target[2] = (uint16_t)(picoFC_ctx.command.throttle + pid_offset[PITCH] + pid_offset[ROLL]);// - pid_offset[YAW]);
-    motor_target[3] = (uint16_t)(picoFC_ctx.command.throttle - pid_offset[PITCH] + pid_offset[ROLL]);// + pid_offset[YAW]);
+    motor_target[0] = (uint16_t)(picoFC_ctx.command.throttle + pid_offset[PITCH] + pid_offset[ROLL]);// + pid_offset[YAW]);
+    motor_target[1] = (uint16_t)(picoFC_ctx.command.throttle - pid_offset[PITCH] + pid_offset[ROLL]);// - pid_offset[YAW]);
+    motor_target[2] = (uint16_t)(picoFC_ctx.command.throttle - pid_offset[PITCH] - pid_offset[ROLL]);// + pid_offset[YAW]);
+    motor_target[3] = (uint16_t)(picoFC_ctx.command.throttle + pid_offset[PITCH] - pid_offset[ROLL]);// - pid_offset[YAW]);
 
     // make sure targets are valid DSHOT values
     for (size_t i = 0; i < NUM_MOTORS; i++)
     {
-        motor_target[i] = MIN(DSHOT_MAX/3, motor_target[i]);
+        motor_target[i] = MIN(1250, motor_target[i]);
         motor_target[i] = MAX(DSHOT_MIN, motor_target[i]);
     }
 }

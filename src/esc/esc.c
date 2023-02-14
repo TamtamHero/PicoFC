@@ -1,6 +1,7 @@
 #include "esc.h"
 
-uint8_t motor_pins[NUM_MOTORS] = {15, 26, 27, 28};
+// uint8_t motor_pins[NUM_MOTORS] = {15, 26, 27, 28};
+uint8_t motor_pins[NUM_MOTORS] = {28, 27, 15, 26};
 
 /*Scale pwm values from 988us - 2012us to dshot values [48 - 2047]
 988us -> 48
